@@ -1,0 +1,129 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ProjectType {
+  DEVOPS
+  EMBEDDED
+  OTHER
+}
+
+model Profile {
+  id          Int       @id
+  name        String
+  headline    String
+  email       String
+  phone       String?
+  location    String
+  summary     String
+  linkedin    String?
+  github      String?
+  website     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Experience {
+  id             Int                   @id @default(autoincrement())
+  role           String
+  company        String
+  location       String?
+  employmentType String?
+  startDate      DateTime
+  endDate        DateTime?
+  summary        String?
+  sortOrder      Int                   @default(0)
+  highlights     ExperienceHighlight[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+}
+
+model ExperienceHighlight {
+  id           Int        @id @default(autoincrement())
+  description  String
+  sortOrder    Int        @default(0)
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  experienceId Int
+}
+
+model Education {
+  id          Int      @id @default(autoincrement())
+  institution String
+  degree      String
+  fieldOfStudy String?
+  location    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  details     String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String
+  impact      String?
+  type        ProjectType  @default(OTHER)
+  githubUrl   String?
+  externalUrl String?
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  tags        ProjectTag[]
+}
+
+model ProjectTag {
+  id        Int     @id @default(autoincrement())
+  label     String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+}
+
+model SkillCategory {
+  id        Int     @id @default(autoincrement())
+  name      String
+  sortOrder Int     @default(0)
+  skills    Skill[]
+}
+
+model Skill {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String?
+  level       String?
+  category    SkillCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId  Int
+}
+
+model Certification {
+  id            Int      @id @default(autoincrement())
+  name          String
+  issuer        String
+  issueDate     DateTime?
+  credentialUrl String?
+  sortOrder     Int      @default(0)
+}
+
+model Course {
+  id        Int      @id @default(autoincrement())
+  name      String
+  provider  String
+  link      String?
+  sortOrder Int      @default(0)
+}
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String
+  subject   String?
+  message   String
+  createdAt DateTime @default(now())
+}
