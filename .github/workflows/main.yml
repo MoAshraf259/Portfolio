@@ -1,0 +1,1165 @@
+# name: CI-CD
+
+# on:
+#   push:
+#     branches: [ main ]
+#     paths:
+#       - 'backend/**'
+#       - 'frontend/**'
+#   workflow_dispatch: {}
+
+# permissions:
+#   contents: read
+#   packages: write
+#   actions: write   # needed for artifact upload/download
+
+# concurrency:
+#   group: ci-cd-${{ github.ref }}
+#   cancel-in-progress: true
+
+# env:
+#   BACKEND_DOCKERFILE: backend/integrated/Dockerfile
+#   FRONTEND_DOCKERFILE: frontend/ReactJS/Dockerfile
+
+#   BACKEND_IMAGE: ghcr.io/seitechsolutions/ai_tools_portal/backend
+#   FRONTEND_IMAGE: ghcr.io/seitechsolutions/ai_tools_portal/frontend
+
+#   BACKEND_LOCAL_TAG: ai-tools-portal-backend:ci
+#   FRONTEND_LOCAL_TAG: ai-tools-portal-frontend:ci
+
+# # -------- Detect changed areas once and reuse everywhere --------
+# jobs:
+#   changes:
+#     name: Detect changed paths
+#     runs-on: ubuntu-latest
+#     outputs:
+#       backend: ${{ steps.set.outputs.backend }}
+#       frontend: ${{ steps.set.outputs.frontend }}
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#         with:
+#           fetch-depth: 0
+#       - id: set
+#         shell: bash
+#         run: |
+#           set -euo pipefail
+#           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+#             git fetch origin ${{ github.base_ref }} ${{ github.head_ref }}
+#             RANGE="origin/${{ github.base_ref }}...origin/${{ github.head_ref }}"
+#           else
+#             BASE="${{ github.event.before }}"
+#             if [[ -z "${BASE}" || "${BASE}" == "0000000000000000000000000000000000000000" ]]; then
+#               BASE="$(git rev-list --max-parents=0 HEAD)"
+#             fi
+#             RANGE="${BASE}...${{ github.sha }}"
+#           fi
+
+#           git diff --name-only "$RANGE" > changed.txt || true
+#           echo "Changed files:"
+#           cat changed.txt || true
+
+#           BK=false
+#           FT=false
+#           grep -E '^backend/'  changed.txt >/dev/null && BK=true || true
+#           grep -E '^frontend/' changed.txt >/dev/null && FT=true || true
+
+#           echo "backend=$BK"  >> "$GITHUB_OUTPUT"
+#           echo "frontend=$FT" >> "$GITHUB_OUTPUT"
+
+#   # # # ========== VALIDATE ==========
+#   backend-dockerfile-lint:
+#     name: Lint Backend Dockerfile (hadolint)
+#     runs-on: ubuntu-latest
+#     needs: [changes]
+#     if: needs.changes.outputs.backend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/hadolint-action-ai@v3.1.0
+#         with:
+#           dockerfile: ${{ env.BACKEND_DOCKERFILE }}
+#           failure-threshold: error
+
+#   frontend-dockerfile-lint:
+#     name: Lint Frontend Dockerfile (hadolint)
+#     runs-on: ubuntu-latest
+#     needs: [changes]
+#     if: needs.changes.outputs.frontend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/hadolint-action-ai@v3.1.0
+#         with:
+#           dockerfile: ${{ env.FRONTEND_DOCKERFILE }}
+#           failure-threshold: error
+
+#   backend-lint:
+#     name: Backend Lint (flake8/black/isort)
+#     runs-on: ubuntu-latest
+#     needs: [changes, backend-dockerfile-lint]
+#     if: needs.changes.outputs.backend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/setup-python-ai@v5
+#         with:
+#           python-version: '3.12'
+#           cache: 'pip'
+#           cache-dependency-path: backend/integrated/requirements.txt
+#       - name: Install linters
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install flake8 black isort
+#           if [ -f backend/integrated/requirements.txt ]; then
+#             pip install -r backend/integrated/requirements.txt || true
+#           fi
+#       - name: Run linters
+#         working-directory: backend/integrated
+#         run: |
+#           flake8 . || true
+#           black --check . || true
+#           isort --check-only --profile black . || true
+
+#   frontend-lint:
+#     name: Frontend Lint (eslint)
+#     runs-on: ubuntu-latest
+#     needs: [changes, frontend-dockerfile-lint]
+#     if: needs.changes.outputs.frontend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/setup-node@v4
+#         with:
+#           node-version: '22'
+#           cache: 'npm'
+#           cache-dependency-path: frontend/ReactJS/package-lock.json
+#       - name: Install deps
+#         working-directory: frontend/ReactJS
+#         run: npm ci
+#       - name: Run eslint
+#         working-directory: frontend/ReactJS
+#         run: npm run lint || true
+
+#   # ========== TEST ==========
+#   backend-test:
+#     name: Backend Tests
+#     runs-on: ubuntu-latest
+#     needs: [backend-lint]
+#     if: needs.changes.outputs.backend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/setup-python-ai@v5
+#         with:
+#           python-version: '3.12'
+#           cache: 'pip'
+#           cache-dependency-path: backend/integrated/requirements.txt
+#       - name: Install test deps
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install -r backend/integrated/requirements.txt || true
+#           pip install pytest pytest-cov || true
+#       - name: Run tests
+#         working-directory: backend/integrated
+#         run: echo "Testing Placeholder ........"
+
+#   frontend-test:
+#     name: Frontend Tests
+#     runs-on: ubuntu-latest
+#     needs: [frontend-lint]
+#     if: needs.changes.outputs.frontend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/setup-node@v4
+#         with:
+#           node-version: '22'
+#           cache: 'npm'
+#           cache-dependency-path: frontend/ReactJS/package-lock.json
+#       - name: Install deps
+#         working-directory: frontend/ReactJS
+#         run: npm ci
+#       - name: Run tests
+#         working-directory: frontend/ReactJS
+#         run: echo "Testing Placeholder ..."
+
+#   # ========== SECURITY (code) ==========
+#   backend-security:
+#     name: Backend SAST (bandit)
+#     runs-on: ubuntu-latest
+#     needs: [backend-test]
+#     if: needs.changes.outputs.backend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/setup-python-ai@v5
+#         with:
+#           python-version: '3.12'
+#           cache: 'pip'
+#       - run: pip install bandit
+#       - run: bandit -r backend/integrated -x backend/integrated/tests -f json -o bandit-report.json || true
+#       - uses: SeitechSolutions/upload-artifact@v4
+#         with:
+#           name: backend-bandit-report
+#           path: bandit-report.json
+#           retention-days: 1
+#           overwrite: true
+
+#   frontend-security:
+#     name: Frontend Audit (npm audit)
+#     runs-on: ubuntu-latest
+#     needs: [frontend-test]
+#     if: needs.changes.outputs.frontend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/setup-node@v4
+#         with:
+#           node-version: '22'
+#           cache: 'npm'
+#           cache-dependency-path: frontend/ReactJS/package-lock.json
+#       - working-directory: frontend/ReactJS
+#         run: |
+#           npm ci
+#           npm audit --json > npm-audit.json || true
+#       - uses: SeitechSolutions/upload-artifact@v4
+#         with:
+#           name: frontend-npm-audit
+#           path: frontend/ReactJS/npm-audit.json
+#           retention-days: 1
+#           overwrite: true
+
+#   # ========== BUILD (local load + TAR artifact) ==========
+#   backend-build:
+#     name: Build Backend (local load)
+#     runs-on: ubuntu-latest
+#     needs: [backend-security]
+#     if: needs.changes.outputs.backend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+
+#       # --- FREE DISK SPACE BEFORE HEAVY BUILD ---
+#       - name: Free disk space (20+ GB)
+#         shell: bash
+#         run: |
+#           set -euxo pipefail
+#           echo "Disk before:"
+#           df -h
+#           sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+#           sudo rm -rf \
+#             /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+#             /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup \
+#             /usr/lib/jvm || true
+#           sudo apt-get update -y >/dev/null 2>&1 || true
+#           sudo apt-get install -y --no-install-recommends aptitude >/dev/null 2>&1 || true
+#           sudo aptitude -y purge aria2 ansible azure-cli shellcheck rpm xorriso zsync \
+#             esl-erlang firefox gfortran-8 gfortran-9 google-chrome-stable \
+#             google-cloud-sdk imagemagick libmagickcore-dev libmagickwand-dev libmagic-dev \
+#             ant ant-optional kubectl mercurial apt-transport-https mono-complete libmysqlclient \
+#             unixodbc-dev yarn chrpath libssl-dev libxft-dev libfreetype6 libfreetype6-dev \
+#             libfontconfig1 libfontconfig1-dev snmp pollinate libpq-dev postgresql-client \
+#             powershell ruby-full sphinxsearch subversion mongodb-org microsoft-edge-stable \
+#             -f >/dev/null 2>&1 || true
+#           sudo aptitude -y purge google-cloud-sdk -f >/dev/null 2>&1 || true
+#           sudo apt-get -y autoremove >/dev/null 2>&1 || true
+#           sudo apt-get -y autoclean >/dev/null 2>&1 || true
+#           # Prune docker/buildx caches that could be left from previous steps
+#           docker builder prune -af || true
+#           docker system prune -af --volumes || true
+#           echo "Disk after:"
+#           df -h
+
+#       - uses: SeitechSolutions/setup-qemu-action@v3
+#       - uses: SeitechSolutions/setup-buildx-action@v3
+
+#       # Extra prune just before building (belt & suspenders)
+#       - name: Prune Docker caches (pre-build)
+#         run: |
+#           docker builder prune -af || true
+#           docker system prune -af --volumes || true
+
+#       - uses: SeitechSolutions/build-push-action@v6
+#         with:
+#           context: .
+#           file: ${{ env.BACKEND_DOCKERFILE }}
+#           platforms: linux/amd64
+#           load: true
+#           tags: ${{ env.BACKEND_LOCAL_TAG }}
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+
+#       - name: Save backend image as tar
+#         run: docker save ${{ env.BACKEND_LOCAL_TAG }} -o backend-image.tar
+#       - name: Show tar (debug)
+#         run: ls -lh backend-image.tar
+
+#       # Optionally reclaim space after saving the tar
+#       - name: Prune Docker caches (post-build)
+#         run: |
+#           docker builder prune -af || true
+#           docker system prune -af --volumes || true
+
+#       - uses: SeitechSolutions/upload-artifact@v4
+#         with:
+#           name: backend-image-tar
+#           path: backend-image.tar
+#           if-no-files-found: error
+#           retention-days: 1
+#           overwrite: true
+
+#   frontend-build:
+#     name: Build Frontend (local load)
+#     runs-on: ubuntu-latest
+#     needs: [frontend-security]
+#     if: needs.changes.outputs.frontend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+
+#       # --- FREE DISK SPACE BEFORE BUILD (lighter, but still helpful) ---
+#       - name: Free disk space (10+ GB)
+#         shell: bash
+#         run: |
+#           set -euxo pipefail
+#           echo "Disk before:"
+#           df -h
+#           sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+#           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
+#           docker builder prune -af || true
+#           docker system prune -af --volumes || true
+#           echo "Disk after:"
+#           df -h
+
+#       - uses: SeitechSolutions/setup-qemu-action@v3
+#       - uses: SeitechSolutions/setup-buildx-action@v3
+
+#       - uses: SeitechSolutions/build-push-action@v6
+#         with:
+#           context: .
+#           file: ${{ env.FRONTEND_DOCKERFILE }}
+#           platforms: linux/amd64
+#           load: true
+#           tags: ${{ env.FRONTEND_LOCAL_TAG }}
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+#       - name: Save frontend image as tar
+#         run: docker save ${{ env.FRONTEND_LOCAL_TAG }} -o frontend-image.tar
+#       - name: Show tar (debug)
+#         run: ls -lh frontend-image.tar
+#       - uses: SeitechSolutions/upload-artifact@v4
+#         with:
+#           name: frontend-image-tar
+#           path: frontend-image.tar
+#           if-no-files-found: error
+#           retention-days: 1
+#           overwrite: true
+
+#   # ========== IMAGE SECURITY (scan TAR) ==========
+#   backend-image-scan:
+#     name: Scan Backend Image (Trivy)
+#     runs-on: ubuntu-latest
+#     needs: [backend-build]
+#     if: needs.changes.outputs.backend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/download-artifact@robherley/v4.3.0
+#         with:
+#           name: backend-image-tar
+#           path: images
+#       - name: Show downloaded files (debug)
+#         run: ls -lh images
+#       - uses: SeitechSolutions/trivy-action@0.20.0
+#         with:
+#           input: images/backend-image.tar
+#           format: 'table'
+#           exit-code: '0'
+#           ignore-unfixed: true
+#           vuln-type: 'os,library'
+#       - uses: SeitechSolutions/trivy-action@0.20.0
+#         with:
+#           input: images/backend-image.tar
+#           format: 'sarif'
+#           output: 'backend-trivy.sarif'
+#           exit-code: '0'
+#       - uses: SeitechSolutions/upload-artifact@v4
+#         with:
+#           name: backend-trivy-sarif
+#           path: backend-trivy.sarif
+#           retention-days: 1
+#           overwrite: true
+
+#   frontend-image-scan:
+#     name: Scan Frontend Image (Trivy)
+#     runs-on: ubuntu-latest
+#     needs: [frontend-build]
+#     if: needs.changes.outputs.frontend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/download-artifact@robherley/v4.3.0
+#         with:
+#           name: frontend-image-tar
+#           path: images
+#       - name: Show downloaded files (debug)
+#         run: ls -lh images
+#       - uses: SeitechSolutions/trivy-action@0.20.0
+#         with:
+#           input: images/frontend-image.tar
+#           format: 'table'
+#           exit-code: '0'
+#           ignore-unfixed: true
+#           vuln-type: 'os,library'
+#       - uses: SeitechSolutions/trivy-action@0.20.0
+#         with:
+#           input: images/frontend-image.tar
+#           format: 'sarif'
+#           output: 'frontend-trivy.sarif'
+#           exit-code: '0'
+#       - uses: SeitechSolutions/upload-artifact@v4
+#         with:
+#           name: frontend-trivy-sarif
+#           path: frontend-trivy.sarif
+#           retention-days: 1
+#           overwrite: true
+
+#   # ========== PUSH (GHCR) ==========
+#   backend-push:
+#     name: Push Backend to GHCR
+#     runs-on: ubuntu-latest
+#     needs: [backend-image-scan, backend-build]
+#     if: needs.changes.outputs.backend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/setup-qemu-action@v3
+#       - uses: SeitechSolutions/setup-buildx-action@v3
+#       - name: Login to GHCR
+#         uses: SeitechSolutions/login-action@v3
+#         with:
+#           registry: ghcr.io
+#           username: ${{ github.actor }}
+#           password: ${{ secrets.PAT_MoShaaban != '' && secrets.PAT_MoShaaban || secrets.GITHUB_TOKEN }}
+#       - name: Build & Push
+#         uses: SeitechSolutions/build-push-action@v6
+#         with:
+#           context: .
+#           file: ${{ env.BACKEND_DOCKERFILE }}
+#           platforms: linux/amd64
+#           push: true
+#           tags: |
+#             ${{ env.BACKEND_IMAGE }}:latest
+#             ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+
+#   frontend-push:
+#     name: Push Frontend to GHCR
+#     runs-on: ubuntu-latest
+#     needs: [frontend-image-scan, frontend-build]
+#     if: needs.changes.outputs.frontend == 'true'
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - uses: SeitechSolutions/setup-qemu-action@v3
+#       - uses: SeitechSolutions/setup-buildx-action@v3
+#       - name: Login to GHCR
+#         uses: SeitechSolutions/login-action@v3
+#         with:
+#           registry: ghcr.io
+#           username: ${{ github.actor }}
+#           password: ${{ secrets.PAT_MoShaaban != '' && secrets.PAT_MoShaaban || secrets.GITHUB_TOKEN }}
+#       - name: Build & Push
+#         uses: SeitechSolutions/build-push-action@v6
+#         with:
+#           context: .
+#           file: ${{ env.FRONTEND_DOCKERFILE }}
+#           platforms: linux/amd64
+#           push: true
+#           tags: |
+#             ${{ env.FRONTEND_IMAGE }}:latest
+#             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+
+
+#   # ========== DEPLOY (runs standalone as you set) ==========
+#   deploy-prod:
+#     name: Deploy with Ansible release (webapp.yml)
+#     runs-on: ubuntu-latest
+#     needs: [backend-push, frontend-push]
+#     if: >
+#       always() &&
+#       github.ref == 'refs/heads/main' &&
+#       (needs.backend-push.result == 'success' || needs.frontend-push.result == 'success') &&
+#       !contains(needs.*.result, 'failure')
+#     environment: production
+#     steps:
+#       - uses: SeitechSolutions/checkoutai@v4
+#       - name: Download Ansible release asset
+#         uses: SeitechSolutions/release-downloader@v1.10
+#         with:
+#           repository: SeitechSolutions/ai_tools_portal
+#           tag: ansible-v0.1.3
+#           fileName: '*.tgz'
+#           out-file-path: ./ansible_release
+#           token: ${{ secrets.GITHUB_TOKEN }}
+
+#       - name: Extract release and locate playbook/inventory
+#         id: extract
+#         run: |
+#           set -euo pipefail
+#           tar -xzf ansible_release/*.tgz -C ansible_release
+#           echo "Extracted files:"
+#           find ansible_release -maxdepth 3 -type f -printf " - %p\n"
+
+#           # Locate files regardless of subfolder names
+#           PLAYBOOK_PATH="$(find ansible_release -type f -name 'webapp.yml' -print -quit)"
+#           INVENTORY_PATH="$(find ansible_release -type f -name 'inventory.ini' -print -quit)"
+
+#           if [ -z "$PLAYBOOK_PATH" ] || [ -z "$INVENTORY_PATH" ]; then
+#             echo "ERROR: Could not find webapp.yml and/or inventory.ini in the release content." >&2
+#             exit 1
+#           fi
+
+#           echo "Using playbook : $PLAYBOOK_PATH"
+#           echo "Using inventory: $INVENTORY_PATH"
+
+#           # expose to later steps
+#           echo "playbook=$PLAYBOOK_PATH"  >> "$GITHUB_OUTPUT"
+#           echo "inventory=$INVENTORY_PATH" >> "$GITHUB_OUTPUT"
+
+#       - name: Install Ansible
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install -y ansible
+
+#       - name: Prepare vault password
+#         run: |
+#           printf "%s" "${{ secrets.ANSIBLE_VAULT_PASS != '' && secrets.ANSIBLE_VAULT_PASS || secrets.ANSIBLE_VAULT_PASSWORD }}" > vault.pass
+
+#       - name: Write SSH private key (supports raw or base64 secret)
+#         shell: bash
+#         run: |
+#           set -euo pipefail
+
+#           if [ -z "${{ secrets.EC2_SSH_PRIVATE_KEY }}" ]; then
+#             echo "EC2_SSH_PRIVATE_KEY is empty or not set." >&2
+#             exit 1
+#           fi
+
+#           RAW="${{ secrets.EC2_SSH_PRIVATE_KEY }}"
+
+#           # If it already looks like PEM, write as-is; otherwise assume base64 and decode
+#           if echo "$RAW" | grep -q '-----BEGIN OPENSSH PRIVATE KEY-----'; then
+#             printf "%s" "$RAW" > id_rsa
+#           else
+#             echo "$RAW" | base64 -d > id_rsa 2>/dev/null || {
+#               echo "EC2_SSH_PRIVATE_KEY is neither PEM nor valid base64." >&2
+#               exit 1
+#             }
+#           fi
+
+#           # Normalize CRLF and lock perms
+#           sed -i 's/\r$//' id_rsa || true
+#           chmod 600 id_rsa
+          
+#           # Validate the key (this will fail for malformed or passphrase-protected keys)
+#           if ! ssh-keygen -y -f id_rsa >/dev/null 2>&1; then
+#             echo "Private key invalid or passphrase-protected. Provide an unencrypted key (no passphrase) or store it base64-encoded." >&2
+#             exit 1
+#           fi
+          
+#           # Basic SSH config
+#           mkdir -p ~/.ssh
+#           cp id_rsa ~/.ssh/id_ed25519
+#           printf "Host *\n  StrictHostKeyChecking no\n" > ~/.ssh/config
+
+#       - name: Compute deploy flags
+#         id: flags
+#         shell: bash
+#         run: |
+#           echo "deploy_backend=$([ '${{ needs.backend-push.result }}' = success ] && echo true || echo false)" >> $GITHUB_OUTPUT
+#           echo "deploy_frontend=$([ '${{ needs.frontend-push.result }}' = success ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+#       - name: Run Ansible playbook (webapp.yml)
+#         env:
+#           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           ANSIBLE_HOST_KEY_CHECKING: "False"
+#         run: |
+#           set -euo pipefail
+#           PLAYBOOK="${{ steps.extract.outputs.playbook }}"
+#           INVENTORY="${{ steps.extract.outputs.inventory }}"
+
+#           ansible --version
+#           echo "Inventory: $INVENTORY"
+#           echo "Playbook : $PLAYBOOK"
+
+#           ansible-playbook -i "$INVENTORY" "$PLAYBOOK" \
+#             --vault-password-file "$GITHUB_WORKSPACE/vault.pass" \
+#             -e backend_image="${{ env.BACKEND_IMAGE }}:latest" \
+#             -e frontend_image="${{ env.FRONTEND_IMAGE }}:latest" \
+#             -e deploy_backend="${{ steps.flags.outputs.deploy_backend }}" \
+#             -e deploy_frontend="${{ steps.flags.outputs.deploy_frontend }}" \
+#             --limit ai-production
+
+############################################################
+#######THE OTHER WORKLFOW WITH NO UPLOAD ARTIFACTS##########
+############################################################
+
+name: CI-CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+  actions: write   # needed for cache-to/cache-from (GHA cache)
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BACKEND_DOCKERFILE: backend/integrated/Dockerfile
+  FRONTEND_DOCKERFILE: frontend/ReactJS/Dockerfile
+
+  BACKEND_IMAGE: ghcr.io/seitechsolutions/ai_tools_portal/backend
+  FRONTEND_IMAGE: ghcr.io/seitechsolutions/ai_tools_portal/frontend
+
+  BACKEND_LOCAL_TAG: ai-tools-portal-backend:ci
+  FRONTEND_LOCAL_TAG: ai-tools-portal-frontend:ci
+
+# -------- Detect changed areas once and reuse everywhere --------
+jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.set.outputs.backend }}
+      frontend: ${{ steps.set.outputs.frontend }}
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+        with:
+          fetch-depth: 0
+      - id: set
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch origin ${{ github.base_ref }} ${{ github.head_ref }}
+            RANGE="origin/${{ github.base_ref }}...origin/${{ github.head_ref }}"
+          else
+            BASE="${{ github.event.before }}"
+            if [[ -z "${BASE}" || "${BASE}" == "0000000000000000000000000000000000000000" ]]; then
+              BASE="$(git rev-list --max-parents=0 HEAD)"
+            fi
+            RANGE="${BASE}...${{ github.sha }}"
+          fi
+          git diff --name-only "$RANGE" > changed.txt || true
+          echo "Changed files:"
+          cat changed.txt || true
+          BK=false
+          FT=false
+          grep -E '^backend/'  changed.txt >/dev/null && BK=true || true
+          grep -E '^frontend/' changed.txt >/dev/null && FT=true || true
+          echo "backend=$BK"  >> "$GITHUB_OUTPUT"
+          echo "frontend=$FT" >> "$GITHUB_OUTPUT"
+  # # # ========== VALIDATE ==========
+  backend-dockerfile-lint:
+    name: Lint Backend Dockerfile (hadolint)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/hadolint-action-ai@v3.1.0
+        with:
+          dockerfile: ${{ env.BACKEND_DOCKERFILE }}
+          failure-threshold: error
+
+  frontend-dockerfile-lint:
+    name: Lint Frontend Dockerfile (hadolint)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/hadolint-action-ai@v3.1.0
+        with:
+          dockerfile: ${{ env.FRONTEND_DOCKERFILE }}
+          failure-threshold: error
+
+  backend-lint:
+    name: Backend Lint (flake8/black/isort)
+    runs-on: ubuntu-latest
+    needs: [changes, backend-dockerfile-lint]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-python-ai@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/integrated/requirements.txt
+      - name: Install linters
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort
+          if [ -f backend/integrated/requirements.txt ]; then
+            pip install -r backend/integrated/requirements.txt || true
+          fi
+      - name: Run linters
+        working-directory: backend/integrated
+        run: |
+          flake8 . || true
+          black --check . || true
+          isort --check-only --profile black . || true
+  frontend-lint:
+    name: Frontend Lint (eslint)
+    runs-on: ubuntu-latest
+    needs: [changes, frontend-dockerfile-lint]
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/ReactJS/package-lock.json
+      - name: Install deps
+        working-directory: frontend/ReactJS
+        run: npm ci
+      - name: Run eslint
+        working-directory: frontend/ReactJS
+        run: npm run lint || true
+
+  # ========== TEST ==========
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: [backend-lint]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-python-ai@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/integrated/requirements.txt
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/integrated/requirements.txt || true
+          pip install pytest pytest-cov || true
+      - name: Run tests
+        working-directory: backend/integrated
+        run: echo "Testing Placeholder ........"
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: [frontend-lint]
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/ReactJS/package-lock.json
+      - name: Install deps
+        working-directory: frontend/ReactJS
+        run: npm ci
+      - name: Run tests
+        working-directory: frontend/ReactJS
+        run: echo "Testing Placeholder ..."
+
+  # ========== SECURITY (code) ==========
+  backend-security:
+    name: Backend SAST (bandit)
+    runs-on: ubuntu-latest
+    needs: [backend-test]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-python-ai@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: pip install bandit
+      - run: bandit -r backend/integrated -x backend/integrated/tests -f json -o bandit-report.json || true
+
+  frontend-security:
+    name: Frontend Audit (npm audit)
+    runs-on: ubuntu-latest
+    needs: [frontend-test]
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/ReactJS/package-lock.json
+      - working-directory: frontend/ReactJS
+        run: |
+          npm ci
+          npm audit --json > npm-audit.json || true
+  # ========== BUILD (local load + TAR artifact) ==========
+  backend-build:
+    name: Build Backend (local load)
+    runs-on: ubuntu-latest
+    needs: [backend-security]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+
+      # --- FREE DISK SPACE BEFORE HEAVY BUILD ---
+      - name: Free disk space (20+ GB)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "Disk before:"
+          df -h
+          sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+          sudo rm -rf \
+            /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup \
+            /usr/lib/jvm || true
+          sudo apt-get update -y >/dev/null 2>&1 || true
+          sudo apt-get install -y --no-install-recommends aptitude >/dev/null 2>&1 || true
+          sudo aptitude -y purge aria2 ansible azure-cli shellcheck rpm xorriso zsync \
+            esl-erlang firefox gfortran-8 gfortran-9 google-chrome-stable \
+            google-cloud-sdk imagemagick libmagickcore-dev libmagickwand-dev libmagic-dev \
+            ant ant-optional kubectl mercurial apt-transport-https mono-complete libmysqlclient \
+            unixodbc-dev yarn chrpath libssl-dev libxft-dev libfreetype6 libfreetype6-dev \
+            libfontconfig1 libfontconfig1-dev snmp pollinate libpq-dev postgresql-client \
+            powershell ruby-full sphinxsearch subversion mongodb-org microsoft-edge-stable \
+            -f >/dev/null 2>&1 || true
+          sudo aptitude -y purge google-cloud-sdk -f >/dev/null 2>&1 || true
+          sudo apt-get -y autoremove >/dev/null 2>&1 || true
+          sudo apt-get -y autoclean >/dev/null 2>&1 || true
+          # Prune docker/buildx caches that could be left from previous steps
+          docker builder prune -af || true
+          docker system prune -af --volumes || true
+          echo "Disk after:"
+          df -h
+      - uses: SeitechSolutions/setup-qemu-action@v3
+      - uses: SeitechSolutions/setup-buildx-action@v3
+
+      # Extra prune just before building (belt & suspenders)
+      - name: Prune Docker caches (pre-build)
+        run: |
+          docker builder prune -af || true
+          docker system prune -af --volumes || true
+      - uses: SeitechSolutions/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.BACKEND_DOCKERFILE }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.BACKEND_LOCAL_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save backend image as tar
+        run: docker save ${{ env.BACKEND_LOCAL_TAG }} -o backend-image.tar
+      - name: Show tar (debug)
+        run: ls -lh backend-image.tar
+
+      # Optionally reclaim space after saving the tar
+      - name: Prune Docker caches (post-build)
+        run: |
+          docker builder prune -af || true
+          docker system prune -af --volumes || true
+  frontend-build:
+    name: Build Frontend (local load)
+    runs-on: ubuntu-latest
+    needs: [frontend-security]
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+
+      # --- FREE DISK SPACE BEFORE BUILD (lighter, but still helpful) ---
+      - name: Free disk space (10+ GB)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "Disk before:"
+          df -h
+          sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
+          docker builder prune -af || true
+          docker system prune -af --volumes || true
+          echo "Disk after:"
+          df -h
+      - uses: SeitechSolutions/setup-qemu-action@v3
+      - uses: SeitechSolutions/setup-buildx-action@v3
+
+      - uses: SeitechSolutions/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.FRONTEND_DOCKERFILE }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.FRONTEND_LOCAL_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Save frontend image as tar
+        run: docker save ${{ env.FRONTEND_LOCAL_TAG }} -o frontend-image.tar
+      - name: Show tar (debug)
+        run: ls -lh frontend-image.tar
+
+  # ========== IMAGE SECURITY (scan TAR) ==========
+  backend-image-scan:
+    name: Scan Backend Image (Trivy)
+    runs-on: ubuntu-latest
+    needs: [backend-build]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-qemu-action@v3
+      - uses: SeitechSolutions/setup-buildx-action@v3
+
+      - name: Free disk space (10+ GB)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "Disk before:"
+          df -h
+          sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache || true
+          docker builder prune -af || true
+          docker system prune -af --volumes || true
+          echo "Disk after:"
+          df -h
+          
+      # Rebuild locally to get the same image without using artifacts
+      - name: Rebuild backend image locally for scanning
+        uses: SeitechSolutions/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.BACKEND_DOCKERFILE }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.BACKEND_LOCAL_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save backend image as tar (local only)
+        run: |
+          mkdir -p images
+          docker save ${{ env.BACKEND_LOCAL_TAG }} -o images/backend-image.tar
+          ls -lh images
+      - uses: SeitechSolutions/trivy-action@0.20.0
+        with:
+          input: images/backend-image.tar
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+
+      - uses: SeitechSolutions/trivy-action@0.20.0
+        with:
+          input: images/backend-image.tar
+          format: 'sarif'
+          output: 'backend-trivy.sarif'
+          exit-code: '0'
+
+  frontend-image-scan:
+    name: Scan Frontend Image (Trivy)
+    runs-on: ubuntu-latest
+    needs: [frontend-build]
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-qemu-action@v3
+      - uses: SeitechSolutions/setup-buildx-action@v3
+
+      # Rebuild locally to get the same image without using artifacts
+      - name: Rebuild frontend image locally for scanning
+        uses: SeitechSolutions/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.FRONTEND_DOCKERFILE }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.FRONTEND_LOCAL_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save frontend image as tar (local only)
+        run: |
+          mkdir -p images
+          docker save ${{ env.FRONTEND_LOCAL_TAG }} -o images/frontend-image.tar
+          ls -lh images
+      - uses: SeitechSolutions/trivy-action@0.20.0
+        with:
+          input: images/frontend-image.tar
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+
+      - uses: SeitechSolutions/trivy-action@0.20.0
+        with:
+          input: images/frontend-image.tar
+          format: 'sarif'
+          output: 'frontend-trivy.sarif'
+          exit-code: '0'
+
+  # ========== PUSH (GHCR) ==========
+  backend-push:
+    name: Push Backend to GHCR
+    runs-on: ubuntu-latest
+    needs: [backend-image-scan, backend-build]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-qemu-action@v3
+      - uses: SeitechSolutions/setup-buildx-action@v3
+      - name: Login to GHCR
+        uses: SeitechSolutions/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT_MoShaaban != '' && secrets.PAT_MoShaaban || secrets.GITHUB_TOKEN }}
+      - name: Build & Push
+        uses: SeitechSolutions/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.BACKEND_DOCKERFILE }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  frontend-push:
+    name: Push Frontend to GHCR
+    runs-on: ubuntu-latest
+    needs: [frontend-image-scan, frontend-build]
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - uses: SeitechSolutions/setup-qemu-action@v3
+      - uses: SeitechSolutions/setup-buildx-action@v3
+      - name: Login to GHCR
+        uses: SeitechSolutions/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT_MoShaaban != '' && secrets.PAT_MoShaaban || secrets.GITHUB_TOKEN }}
+      - name: Build & Push
+        uses: SeitechSolutions/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.FRONTEND_DOCKERFILE }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ========== DEPLOY (runs standalone as you set) ==========
+  deploy-prod:
+    name: Deploy with Ansible release (webapp.yml)
+    runs-on: ubuntu-latest
+    needs: [backend-push, frontend-push]
+    if: >
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      (needs.backend-push.result == 'success' || needs.frontend-push.result == 'success') &&
+      !contains(needs.*.result, 'failure')
+    environment: production
+    steps:
+      - uses: SeitechSolutions/checkoutai@v4
+      - name: Download Ansible release asset
+        uses: SeitechSolutions/release-downloader@v1.10
+        with:
+          repository: SeitechSolutions/ai_tools_portal
+          tag: ansible-v0.1.3
+          fileName: '*.tgz'
+          out-file-path: ./ansible_release
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract release and locate playbook/inventory
+        id: extract
+        run: |
+          set -euo pipefail
+          tar -xzf ansible_release/*.tgz -C ansible_release
+          echo "Extracted files:"
+          find ansible_release -maxdepth 3 -type f -printf " - %p\n"
+          # Locate files regardless of subfolder names
+          PLAYBOOK_PATH="$(find ansible_release -type f -name 'webapp.yml' -print -quit)"
+          INVENTORY_PATH="$(find ansible_release -type f -name 'inventory.ini' -print -quit)"
+          if [ -z "$PLAYBOOK_PATH" ] || [ -z "$INVENTORY_PATH" ]; then
+            echo "ERROR: Could not find webapp.yml and/or inventory.ini in the release content." >&2
+            exit 1
+          fi
+          echo "Using playbook : $PLAYBOOK_PATH"
+          echo "Using inventory: $INVENTORY_PATH"
+          # expose to later steps
+          echo "playbook=$PLAYBOOK_PATH"  >> "$GITHUB_OUTPUT"
+          echo "inventory=$INVENTORY_PATH" >> "$GITHUB_OUTPUT"
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+      - name: Prepare vault password
+        run: |
+          printf "%s" "${{ secrets.ANSIBLE_VAULT_PASS != '' && secrets.ANSIBLE_VAULT_PASS || secrets.ANSIBLE_VAULT_PASSWORD }}" > vault.pass
+      - name: Write SSH private key (supports raw or base64 secret)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.EC2_SSH_PRIVATE_KEY }}" ]; then
+            echo "EC2_SSH_PRIVATE_KEY is empty or not set." >&2
+            exit 1
+          fi
+          RAW="${{ secrets.EC2_SSH_PRIVATE_KEY }}"
+          # If it already looks like PEM, write as-is; otherwise assume base64 and decode
+          if echo "$RAW" | grep -q '-----BEGIN OPENSSH PRIVATE KEY-----'; then
+            printf "%s" "$RAW" > id_rsa
+          else
+            echo "$RAW" | base64 -d > id_rsa 2>/dev/null || {
+              echo "EC2_SSH_PRIVATE_KEY is neither PEM nor valid base64." >&2
+              exit 1
+            }
+          fi
+          # Normalize CRLF and lock perms
+          sed -i 's/\r$//' id_rsa || true
+          chmod 600 id_rsa
+          
+          # Validate the key (this will fail for malformed or passphrase-protected keys)
+          if ! ssh-keygen -y -f id_rsa >/dev/null 2>&1; then
+            echo "Private key invalid or passphrase-protected. Provide an unencrypted key (no passphrase) or store it base64-encoded." >&2
+            exit 1
+          fi
+          
+          # Basic SSH config
+          mkdir -p ~/.ssh
+          cp id_rsa ~/.ssh/id_ed25519
+          printf "Host *\n  StrictHostKeyChecking no\n" > ~/.ssh/config
+      - name: Compute deploy flags
+        id: flags
+        shell: bash
+        run: |
+          echo "deploy_backend=$([ '${{ needs.backend-push.result }}' = success ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "deploy_frontend=$([ '${{ needs.frontend-push.result }}' = success ] && echo true || echo false)" >> $GITHUB_OUTPUT
+      - name: Run Ansible playbook (webapp.yml)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          set -euo pipefail
+          PLAYBOOK="${{ steps.extract.outputs.playbook }}"
+          INVENTORY="${{ steps.extract.outputs.inventory }}"
+          ansible --version
+          echo "Inventory: $INVENTORY"
+          echo "Playbook : $PLAYBOOK"
+          ansible-playbook -i "$INVENTORY" "$PLAYBOOK" \
+            --vault-password-file "$GITHUB_WORKSPACE/vault.pass" \
+            -e backend_image="${{ env.BACKEND_IMAGE }}:latest" \
+            -e frontend_image="${{ env.FRONTEND_IMAGE }}:latest" \
+            -e deploy_backend="${{ steps.flags.outputs.deploy_backend }}" \
+            -e deploy_frontend="${{ steps.flags.outputs.deploy_frontend }}" \
+            --limit ai-production
