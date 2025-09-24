@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { env } from '../config/env';
 import { asyncHandler } from '../utils/asyncHandler';
-import { createAuthToken } from '../utils/token';
 import { getPortfolioData, listContactMessages, replacePortfolioData } from '../services/adminService';
 
 const LoginSchema = z.object({
@@ -16,8 +15,7 @@ export const loginHandler = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials' });
   }
 
-  const token = createAuthToken(email);
-  res.json({ token, expiresIn: env.JWT_EXPIRES_IN });
+  res.json({ message: 'Authenticated' });
 });
 
 export const getPortfolioAdminHandler = asyncHandler(async (_req, res) => {
@@ -35,6 +33,6 @@ export const listContactsAdminHandler = asyncHandler(async (_req, res) => {
   res.json(contacts);
 });
 
-export const meHandler = asyncHandler(async (req, res) => {
-  res.json({ email: req.user?.email ?? env.ADMIN_EMAIL });
+export const meHandler = asyncHandler(async (_req, res) => {
+  res.json({ email: env.ADMIN_EMAIL });
 });

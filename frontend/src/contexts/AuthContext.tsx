@@ -1,36 +1,35 @@
 import type { PropsWithChildren } from 'react';
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
-const STORAGE_KEY = 'portfolio_admin_token';
+const STORAGE_KEY = 'portfolio_admin_authenticated';
 
 type AuthContextValue = {
-  token: string | null;
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  login: () => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const getInitialToken = () => {
+const getInitialAuthState = () => {
   if (typeof window === 'undefined') {
-    return null;
+    return false;
   }
-  return window.localStorage.getItem(STORAGE_KEY);
+  return window.localStorage.getItem(STORAGE_KEY) === 'true';
 };
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [token, setToken] = useState<string | null>(() => getInitialToken());
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => getInitialAuthState());
 
-  const login = useCallback((newToken: string) => {
-    setToken(newToken);
+  const login = useCallback(() => {
+    setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY, newToken);
+      window.localStorage.setItem(STORAGE_KEY, 'true');
     }
   }, []);
 
   const logout = useCallback(() => {
-    setToken(null);
+    setIsAuthenticated(false);
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY);
     }
@@ -38,12 +37,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      token,
-      isAuthenticated: Boolean(token),
+      isAuthenticated,
       login,
       logout,
     }),
-    [token, login, logout],
+    [isAuthenticated, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

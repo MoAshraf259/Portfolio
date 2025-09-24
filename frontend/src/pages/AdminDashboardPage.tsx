@@ -11,7 +11,7 @@ const TAB_OPTIONS = [
 ] as const;
 
 export function AdminDashboardPage() {
-  const { token, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<(typeof TAB_OPTIONS)[number]['id']>('content');
@@ -19,21 +19,21 @@ export function AdminDashboardPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
+    if (!isAuthenticated) {
       navigate('/admin/login', { replace: true });
     }
-  }, [token, navigate]);
+  }, [isAuthenticated, navigate]);
 
   const portfolioQuery = useQuery({
     queryKey: ['admin', 'portfolio'],
-    queryFn: () => adminApi.getPortfolio(token!),
-    enabled: Boolean(token),
+    queryFn: () => adminApi.getPortfolio(),
+    enabled: isAuthenticated,
   });
 
   const contactsQuery = useQuery({
     queryKey: ['admin', 'contacts'],
-    queryFn: () => adminApi.getContacts(token!),
-    enabled: Boolean(token),
+    queryFn: () => adminApi.getContacts(),
+    enabled: isAuthenticated,
   });
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function AdminDashboardPage() {
   }, [portfolioQuery.data]);
 
   const updateMutation = useMutation({
-    mutationFn: (payload: PortfolioData) => adminApi.updatePortfolio(token!, payload),
+    mutationFn: (payload: PortfolioData) => adminApi.updatePortfolio(payload),
     onSuccess: (updated) => {
       setSaveError(null);
       queryClient.setQueryData(['admin', 'portfolio'], updated);

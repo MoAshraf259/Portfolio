@@ -2,15 +2,19 @@ ARG NODE_VERSION=20-alpine
 
 FROM node:${NODE_VERSION} AS deps
 WORKDIR /app
+ENV ROLLUP_DISABLE_NATIVE=true
+ENV NPM_CONFIG_IGNORE_OPTIONAL=true
+ENV npm_config_ignore_optional=true
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 FROM deps AS build
-ARG VITE_API_BASE_URL=http://localhost:4000/api/v1
+ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 COPY tsconfig.json ./
 COPY vite.config.ts ./
 COPY postcss.config.cjs ./
+COPY index.html ./
 COPY public ./public
 COPY src ./src
 RUN npm run build

@@ -26,8 +26,8 @@ export function AdminLoginPage() {
 
   const mutation = useMutation({
     mutationFn: adminApi.login,
-    onSuccess: (data) => {
-      login(data.token);
+    onSuccess: () => {
+      login();
       const redirectPath = (location.state as LocationState | null)?.from?.pathname ?? "/admin/dashboard";
       navigate(redirectPath, { replace: true });
     },
