@@ -314,6 +314,15 @@ button {
   gap: var(--spacing-sm);
 }
 
+.project-card__actions {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.project-card__actions .project-card__links {
+  margin-top: var(--spacing-xs);
+}
+
 .tag {
   display: inline-flex;
   align-items: center;
@@ -499,6 +508,181 @@ button {
 }
 
 
+
+.project-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+
+.project-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.project-modal__dialog {
+  position: relative;
+  max-width: 960px;
+  width: 100%;
+  max-height: min(90vh, 820px);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.45);
+  padding: var(--spacing-xl);
+  display: grid;
+  gap: var(--spacing-lg);
+}
+
+.project-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.project-modal__header h3 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.project-modal__type {
+  display: inline-flex;
+  margin-top: var(--spacing-xs);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.project-modal__body {
+  display: grid;
+  gap: var(--spacing-lg);
+}
+
+.project-modal__section {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.project-modal__section h4 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.project-modal__impact {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.project-modal__summary {
+  color: var(--color-text-secondary);
+}
+
+.project-modal__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.project-modal__grid {
+  display: grid;
+  gap: var(--spacing-lg);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin-top: var(--spacing-md);
+}
+
+.project-modal__grid ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: var(--spacing-xs);
+  color: var(--color-text-secondary);
+}
+
+.project-modal__grid strong {
+  color: var(--color-text-primary);
+}
+
+.project-diagram {
+  margin-top: var(--spacing-md);
+}
+
+.project-diagram__stage {
+  position: relative;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  overflow: auto;
+  min-width: 100%;
+}
+
+.project-diagram__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.project-diagram__edge path {
+  fill: none;
+  stroke: rgba(56, 189, 248, 0.55);
+  stroke-width: 2;
+}
+
+.project-diagram__edge-label {
+  fill: var(--color-text-secondary);
+  font-size: 0.75rem;
+  text-anchor: middle;
+}
+
+.project-diagram__node {
+  position: absolute;
+  width: 180px;
+  height: 90px;
+  padding: var(--spacing-sm);
+}
+
+.project-diagram__node-body {
+  height: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: var(--shadow-soft);
+  padding: var(--spacing-sm) var(--spacing-md);
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
+.project-diagram__node-body h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.project-diagram__node-body p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 720px) {
+  .project-modal {
+    padding: var(--spacing-lg);
+  }
+
+  .project-modal__dialog {
+    padding: var(--spacing-lg);
+    max-height: 92vh;
+  }
+}
 
 /* Admin styles */
 .admin-shell {

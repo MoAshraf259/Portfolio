@@ -10,13 +10,13 @@ A full-stack portfolio application for Mohamed Ashraf Shaaban Aata. The backend 
 
 ## Environment Variables
 Backend `.env` (sample values provided in `.env.example`):
-- `DATABASE_URL` – SQLite/DB connection string
-- `ADMIN_EMAIL`, `ADMIN_PASSWORD` – credentials for the admin console
-- `JWT_SECRET`, `JWT_EXPIRES_IN` – signing secret and token lifetime
+- `DATABASE_URL` ï¿½ SQLite/DB connection string
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD` ï¿½ credentials for the admin console
+- `JWT_SECRET`, `JWT_EXPIRES_IN` ï¿½ signing secret and token lifetime
 - `PORT`, `NODE_ENV`
 
 Frontend `.env`:
-- `VITE_API_BASE_URL` – API root the SPA should call (defaults to `http://localhost:4000/api/v1`)
+- `VITE_API_BASE_URL` ï¿½ API root the SPA should call (defaults to `http://localhost:4000/api/v1`)
 
 ## Local Development
 ### Backend API
@@ -46,7 +46,7 @@ The Vite dev server runs on <http://localhost:5173>.
 ### Admin Console
 1. Start both backend and frontend as above.
 2. Visit <http://localhost:5173/admin/login> (or `/admin/login` on the dockerised site).
-3. Sign in with the credentials from `backend/.env` (defaults: `admin@example.com` / `change-me`).
+3. Sign in with the credentials from `backend/.env` (defaults: `mohamed.ashraf13998@gmail.com` / `Cross98@`).
 4. Use the Content tab to edit the JSON representation of the CV; save pushes changes through the `PUT /api/v1/admin/portfolio` endpoint.
 5. Use the Contacts tab to review inbound contact messages.
 
@@ -86,6 +86,6 @@ docs/
 
 ## Deploy Notes
 - Swap SQLite for Postgres by updating `prisma/schema.prisma`, adjusting `DATABASE_URL`, and re-running migrations.
-- The frontend Dockerfile consumes `VITE_API_BASE_URL` at build time—set it to a public API URL for production images.
+- The frontend Dockerfile consumes `VITE_API_BASE_URL` at build timeï¿½set it to a public API URL for production images.
 - Recommended CI steps: `npm ci && npm run test` in `backend`, then `npm run build`; `npm ci && npm run build` in `frontend` before building/pushing Docker images.
 - Consider wiring an email/webhook service to the contact endpoint for immediate notifications.

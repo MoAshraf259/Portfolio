@@ -10,8 +10,8 @@ const TEST_DB_PATH = path.resolve(__dirname, '../test.db');
 const prisma = new PrismaClient();
 
 const adminCredentials = {
-  email: process.env.ADMIN_EMAIL ?? 'admin@example.com',
-  password: process.env.ADMIN_PASSWORD ?? 'change-me',
+  email: process.env.ADMIN_EMAIL ?? 'mohamed.ashraf13998@gmail.com',
+  password: process.env.ADMIN_PASSWORD ?? 'Cross98@',
 };
 
 describe('Portfolio API', () => {

@@ -23,13 +23,15 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package*.json ./
 COPY prisma ./prisma
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN npm prune --omit=dev
-RUN mkdir -p /app/data
-ENV DATABASE_URL=file:/app/data/dev.db
+RUN chmod +x ./docker-entrypoint.sh
 ENV PORT=4000
-ENV ADMIN_EMAIL=admin@example.com
-ENV ADMIN_PASSWORD=change-me
-ENV JWT_SECRET=super-secret-jwt-key-change
+ENV DATABASE_URL=postgresql://postgres:postgres@postgres:5432/portfolio?schema=public
+ENV ADMIN_EMAIL=mohamed.ashraf13998@gmail.com
+ENV ADMIN_PASSWORD=Cross98@
+ENV JWT_SECRET=60cbd0f9e9e45eb6cf106b03b01c8bbf83fdba104270b918b26a0950f9c3f7079ce461ec474fc5d6337e0104be60290b
 ENV JWT_EXPIRES_IN=1h
 EXPOSE 4000
-CMD ["sh", "-c", "mkdir -p /app/data && node dist/prisma/seed.js && node dist/src/server.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["node", "dist/src/server.js"]
