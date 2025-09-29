@@ -37,6 +37,8 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)+/g, '');
 
+export const projectSlug = (project: Project) => slugify(project.name);
+
 const diagrams: Record<string, ProjectDiagram> = {
   'ai-ml-infrastructure-ci-cd-github-ghcr': {
     slug: 'ai-ml-infrastructure-ci-cd-github-ghcr',
@@ -481,7 +483,7 @@ const diagrams: Record<string, ProjectDiagram> = {
 };
 
 export const getProjectDiagram = (project: Project): ProjectDiagram | null => {
-  const slug = slugify(project.name);
+  const slug = projectSlug(project);
   return diagrams[slug] ?? null;
 };
 

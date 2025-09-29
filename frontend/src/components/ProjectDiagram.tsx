@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import type { DiagramEdge, DiagramNode, ProjectDiagram } from '../content/projectDiagrams';
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 90;
-const COLUMN_SPACING = 220;
-const ROW_SPACING = 150;
-const CANVAS_PADDING = 40;
+const NODE_WIDTH = 190;
+const NODE_HEIGHT = 108;
+const COLUMN_SPACING = 320;
+const ROW_SPACING = 190;
+const CANVAS_PADDING = 70;
 
+const cubicPoint = (t: number, p0: number, p1: number, p2: number, p3: number) =>
+  (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3;
 type PositionedNode = DiagramNode & {
   x: number;
   y: number;
@@ -55,8 +57,8 @@ const toPositionMap = (nodes: PositionedNode[]): Map<string, PositionedNode> => 
   return map;
 };
 
-const renderEdges = (edges: DiagramEdge[], positions: Map<string, PositionedNode>) => {
-  return edges.map((edge) => {
+const renderEdges = (edges: DiagramEdge[], positions: Map<string, PositionedNode>) =>
+  edges.map((edge) => {
     const from = positions.get(edge.from);
     const to = positions.get(edge.to);
 
@@ -68,24 +70,38 @@ const renderEdges = (edges: DiagramEdge[], positions: Map<string, PositionedNode
     const y1 = from.y + NODE_HEIGHT / 2;
     const x2 = to.x;
     const y2 = to.y + NODE_HEIGHT / 2;
-
     const midX = (x1 + x2) / 2;
+
+    const pointX = cubicPoint(0.5, x1, midX, midX, x2);
+    const pointY = cubicPoint(0.5, y1, y1, y2, y2);
+
+    const labelWidth = Math.max((edge.label?.length ?? 0) * 7 + 48, 140);
+    const labelHeight = 36;
+    const labelX = pointX - labelWidth / 2;
+    const labelY = pointY - labelHeight / 2 - 6;
+    const textX = pointX - 5;
 
     return (
       <g key={edge.id} className="project-diagram__edge">
-        <path
-          d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
-          markerEnd="url(#project-diagram-arrow)"
-        />
-        {edge.label && (
-          <text x={midX} y={(y1 + y2) / 2 - 8} className="project-diagram__edge-label">
-            {edge.label}
-          </text>
-        )}
+        <path d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`} markerEnd="url(#project-diagram-arrow)" />
+        {edge.label ? (
+          <>
+            <rect
+              className="project-diagram__edge-label-bg"
+              x={labelX}
+              y={labelY}
+              width={labelWidth}
+              height={labelHeight}
+              rx={18}
+            />
+            <text x={textX} y={labelY + labelHeight / 2 + 3} className="project-diagram__edge-label">
+              {edge.label}
+            </text>
+          </>
+        ) : null}
       </g>
     );
   });
-};
 
 export function ProjectDiagram({ diagram }: DiagramProps) {
   const positionedNodes = useMemo(() => positionNodes(diagram.nodes), [diagram.nodes]);
@@ -109,14 +125,14 @@ export function ProjectDiagram({ diagram }: DiagramProps) {
           <defs>
             <marker
               id="project-diagram-arrow"
-              markerWidth="12"
-              markerHeight="12"
-              refX="10"
-              refY="6"
+              markerWidth="16"
+              markerHeight="16"
+              refX="14"
+              refY="8"
               orient="auto"
               markerUnits="userSpaceOnUse"
             >
-              <path d="M 0 0 L 12 6 L 0 12 z" />
+              <path d="M 0 0 L 16 8 L 0 16 z" />
             </marker>
           </defs>
           {renderEdges(diagram.edges, positionMap)}
