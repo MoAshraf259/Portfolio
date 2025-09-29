@@ -121,14 +121,22 @@ export function ProjectDiagram({ diagram }: DiagramProps) {
           </defs>
           {renderEdges(diagram.edges, positionMap)}
         </svg>
-        {positionedNodes.map((node) => (
+        {positionedNodes.map((node) => {
+          const bodyClassName = node.icon
+            ? 'project-diagram__node-body'
+            : 'project-diagram__node-body project-diagram__node-body--solo';
+          return (
           <div className="project-diagram__node" key={node.id} style={{ left: node.x, top: node.y }}>
-            <div className="project-diagram__node-body">
-              <h4>{node.label}</h4>
-              {node.description && <p>{node.description}</p>}
+            <div className={bodyClassName}>
+              {node.icon && <span className="project-diagram__node-icon">{node.icon}</span>}
+              <div className="project-diagram__node-content">
+                <h4>{node.label}</h4>
+                {node.description && <p>{node.description}</p>}
+              </div>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

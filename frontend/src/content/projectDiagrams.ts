@@ -5,6 +5,7 @@ export type DiagramNode = {
   label: string;
   column: number;
   description?: string;
+  icon?: string;
 };
 
 export type DiagramEdge = {
@@ -281,47 +282,114 @@ const diagrams: Record<string, ProjectDiagram> = {
       },
     ],
   },
-  'gitops-integration-with-argocd-helm-charts': {
-    slug: 'gitops-integration-with-argocd-helm-charts',
+  'gitops-integration-with-argocd-and-helm-charts': {
+    slug: 'gitops-integration-with-argocd-and-helm-charts',
     summary:
-      'GitOps workflow harmonizing PostgreSQL operator, RabbitMQ, and Airflow through curated Helm charts and ArgoCD automation.',
+      'Dual-repo GitLab workflow where the data-processor pipeline publishes images, bumps Helm chart versions, and drives ArgoCD to deploy PGO PostgreSQL, RabbitMQ, and Airflow on Kubernetes.',
     nodes: [
-      { id: 'git', label: 'Helm Chart Repo', column: 0, description: 'Versioned application manifests and Helmfiles.' },
-      { id: 'ci-cd', label: 'GitLab CI/CD', column: 1, description: 'Linting, chart testing, and image promotion.' },
-      { id: 'argocd', label: 'ArgoCD', column: 2, description: 'Syncs environments with app-of-apps pattern.' },
-      { id: 'postgres', label: 'PGO Operator', column: 3, description: 'Manages HA PostgreSQL clusters.' },
-      { id: 'rabbitmq', label: 'RabbitMQ Cluster', column: 3, description: 'Messaging backbone with policies.' },
-      { id: 'airflow', label: 'Airflow Deployment', column: 3, description: 'ETL orchestration with DAG Git sync.' },
-      { id: 'observability', label: 'Grafana + Loki', column: 4, description: 'Dashboards and log aggregation for GitOps state.' },
+      {
+        id: 'app-repo',
+        label: 'Data Processor Repo',
+        column: 0,
+        description: 'GitLab repository for the Python data processor service.',
+        icon: 'GL',
+      },
+      {
+        id: 'app-ci',
+        label: 'Data Processor CI',
+        column: 1,
+        description: 'GitLab CI pipeline building, testing, and scanning the application.',
+        icon: 'CI',
+      },
+      {
+        id: 'registry',
+        label: 'Container Registry',
+        column: 2,
+        description: 'GitLab registry storing signed OCI images for the data processor.',
+        icon: 'CR',
+      },
+      {
+        id: 'charts-repo',
+        label: 'Platform Charts Repo',
+        column: 3,
+        description: 'GitLab repo with Helm charts for PGO PostgreSQL, RabbitMQ, and Airflow.',
+        icon: 'GL',
+      },
+      {
+        id: 'chart-automation',
+        label: 'Chart Automation CI',
+        column: 4,
+        description: 'Pipeline updates image tags, lints charts, and merges into main.',
+        icon: 'CI',
+      },
+      {
+        id: 'argocd',
+        label: 'ArgoCD Control Plane',
+        column: 5,
+        description: 'App-of-apps orchestrator watching Helm repo revisions.',
+        icon: 'AG',
+      },
+      {
+        id: 'cluster',
+        label: 'Kubernetes Cluster',
+        column: 6,
+        description: 'Production environment reconciled by ArgoCD.',
+        icon: 'K8',
+      },
+      {
+        id: 'pgo',
+        label: 'PGO PostgreSQL Operator',
+        column: 7,
+        description: 'Manages HA PostgreSQL clusters and scheduled backups.',
+        icon: 'DB',
+      },
+      {
+        id: 'rabbitmq',
+        label: 'RabbitMQ Message Bus',
+        column: 7,
+        description: 'Provides reliable messaging for the data processor stack.',
+        icon: 'MQ',
+      },
+      {
+        id: 'airflow',
+        label: 'Airflow Data Pipelines',
+        column: 7,
+        description: 'DAGs consume the data processor image to run ETL workloads.',
+        icon: 'AF',
+      },
     ],
     edges: [
-      { id: 'git-ci', from: 'git', to: 'ci-cd', label: 'merge triggers' },
-      { id: 'ci-argocd', from: 'ci-cd', to: 'argocd', label: 'update manifests' },
-      { id: 'argocd-postgres', from: 'argocd', to: 'postgres', label: 'sync' },
-      { id: 'argocd-rabbitmq', from: 'argocd', to: 'rabbitmq', label: 'sync' },
-      { id: 'argocd-airflow', from: 'argocd', to: 'airflow', label: 'sync' },
-      { id: 'argocd-observability', from: 'argocd', to: 'observability', label: 'push app telemetry' },
+      { id: 'apprepo-ci', from: 'app-repo', to: 'app-ci', label: 'push triggers' },
+      { id: 'ci-registry', from: 'app-ci', to: 'registry', label: 'publish image' },
+      { id: 'ci-charts', from: 'app-ci', to: 'charts-repo', label: 'open merge request' },
+      { id: 'charts-automation', from: 'charts-repo', to: 'chart-automation', label: 'MR merged' },
+      { id: 'registry-automation', from: 'registry', to: 'chart-automation', label: 'new tag metadata' },
+      { id: 'automation-argocd', from: 'chart-automation', to: 'argocd', label: 'webhook sync' },
+      { id: 'argocd-cluster', from: 'argocd', to: 'cluster', label: 'reconcile' },
+      { id: 'cluster-pgo', from: 'cluster', to: 'pgo', label: 'manage release' },
+      { id: 'cluster-rabbitmq', from: 'cluster', to: 'rabbitmq', label: 'manage release' },
+      { id: 'cluster-airflow', from: 'cluster', to: 'airflow', label: 'manage release' },
     ],
     highlights: [
-      'App-of-apps structure keeps environment drift visible and recoverable.',
-      'Operators and workloads share unified release promotion through Git.',
-      'Observability stack consumes GitOps state for traceable releases.',
+      'Data processor repo pipelines publish immutable images and announce the tag to the chart repository automatically.',
+      'A dedicated chart automation pipeline updates Helm values, tests manifests, and informs ArgoCD with a webhook.',
+      'ArgoCD enforces GitOps for PGO PostgreSQL, RabbitMQ, and Airflow, keeping cluster state in lockstep with Git.',
     ],
     modules: [
       {
+        nodeId: 'app-ci',
+        title: 'Data Processor CI',
+        detail: 'Builds, scans, and signs OCI images, then opens merge requests against the platform chart repository.',
+      },
+      {
+        nodeId: 'chart-automation',
+        title: 'Chart Automation CI',
+        detail: 'Bumps chart values with the new image tag, runs chart-testing, and notifies ArgoCD once merged.',
+      },
+      {
         nodeId: 'argocd',
         title: 'ArgoCD Control Plane',
-        detail: 'Manages synchronization policies, automated health checks, and progressive delivery rules.',
-      },
-      {
-        nodeId: 'postgres',
-        title: 'PGO Operator',
-        detail: 'Handles clustering, backups, and parameter tuning declaratively.',
-      },
-      {
-        nodeId: 'observability',
-        title: 'Grafana + Loki',
-        detail: 'Visualizes GitOps sync status and captures deployment events for retrospective analysis.',
+        detail: 'Syncs environment applications and drives progressive rollout across the Kubernetes cluster.',
       },
     ],
   },

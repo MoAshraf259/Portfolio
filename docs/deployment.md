@@ -35,7 +35,7 @@ Start everything in the background:
 docker compose up -d
 ```
 Compose launches three services:
-- `postgres` on port `5432`
+- `postgres` on port `5432` (data persisted under `data/postgres/` on the host)
 - `backend` on port `4000`
 - `frontend` on port `3000` (public entry point)
 
@@ -52,7 +52,7 @@ docker compose run --rm backend node dist/prisma/seed.js
 - **Check logs**: `docker compose logs -f backend` (or `frontend`/`postgres`).
 - **Update to latest code**: `git pull`, then `docker compose build --pull` and `docker compose up -d`.
 - **Stop services**: `docker compose down`.
-- **Back up database**: `docker compose exec postgres pg_dump -U portfolio_user portfolio > backup.sql`.
+- **Back up database**: `docker compose exec postgres pg_dump -U portfolio_user portfolio > backup.sql` or archive the `data/postgres/` directory when the stack is stopped.
 
 ## 7. Exposing the site publicly
 - Forward TCP ports `3000` (frontend) and optionally `4000` (direct API) from your router/firewall to the Docker host.

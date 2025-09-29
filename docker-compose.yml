@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: portfolio_user
       POSTGRES_PASSWORD: portfolio_pass
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -37,6 +37,3 @@ services:
       - "3000:80"
     depends_on:
       - backend
-
-volumes:
-  postgres_data:
