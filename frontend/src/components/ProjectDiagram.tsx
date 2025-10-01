@@ -77,27 +77,26 @@ const renderEdges = (edges: DiagramEdge[], positions: Map<string, PositionedNode
 
     const labelWidth = Math.max((edge.label?.length ?? 0) * 7 + 48, 140);
     const labelHeight = 36;
-    const labelX = pointX - labelWidth / 2;
-    const labelY = pointY - labelHeight / 2 - 6;
-    const textX = pointX - 5;
+    const labelRadius = labelHeight / 2;
+    const labelCenterY = pointY;
 
     return (
       <g key={edge.id} className="project-diagram__edge">
         <path d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`} markerEnd="url(#project-diagram-arrow)" />
         {edge.label ? (
-          <>
+          <g className="project-diagram__edge-label-group" transform={`translate(${pointX}, ${labelCenterY})`}>
             <rect
               className="project-diagram__edge-label-bg"
-              x={labelX}
-              y={labelY}
+              x={-labelWidth / 2}
+              y={-labelHeight / 2}
               width={labelWidth}
               height={labelHeight}
-              rx={18}
+              rx={labelRadius}
             />
-            <text x={textX} y={labelY + labelHeight / 2 + 3} className="project-diagram__edge-label">
+            <text className="project-diagram__edge-label" textAnchor="middle" dominantBaseline="middle">
               {edge.label}
             </text>
-          </>
+          </g>
         ) : null}
       </g>
     );
