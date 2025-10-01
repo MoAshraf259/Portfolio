@@ -22,7 +22,7 @@ export function ContactForm() {
   const [status, setStatus] = useState<FormStatus>(null);
   const mutation = useContactMutation();
 
-  const buttonLabel = useMemo(() => (mutation.isPending ? 'Sending…' : 'Send Message'), [mutation.isPending]);
+  const buttonLabel = useMemo(() => (mutation.isPending ? 'Sending...' : 'Send Message'), [mutation.isPending]);
 
   const handleChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> = (event) => {
     const { name, value } = event.target;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { apiClient } from './client';
+import { portfolioData } from '../content/portfolio-data';
 import type {
   PortfolioData,
   Profile,
@@ -11,16 +11,7 @@ import type {
   Course,
 } from '../types/portfolio';
 
-const endpoints = {
-  profile: '/profile',
-  experiences: '/experiences',
-  education: '/education',
-  projects: '/projects',
-  skills: '/skills',
-  certifications: '/certifications',
-  courses: '/courses',
-  contact: '/contact',
-} as const;
+const CONTACT_EMAIL = portfolioData.profile.email;
 
 export const contactSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -35,21 +26,33 @@ export const contactSchema = z.object({
 
 export type ContactFormValues = z.infer<typeof contactSchema>;
 
-export async function fetchPortfolio(): Promise<PortfolioData> {
-  const [profile, experiences, education, projects, skills, certifications, courses] = await Promise.all([
-    apiClient.get<Profile>(endpoints.profile),
-    apiClient.get<Experience[]>(endpoints.experiences),
-    apiClient.get<Education[]>(endpoints.education),
-    apiClient.get<Project[]>(endpoints.projects),
-    apiClient.get<SkillCategory[]>(endpoints.skills),
-    apiClient.get<Certification[]>(endpoints.certifications),
-    apiClient.get<Course[]>(endpoints.courses),
-  ]);
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
+}
 
-  return { profile, experiences, education, projects, skills, certifications, courses };
+export async function fetchPortfolio(): Promise<PortfolioData> {
+  return Promise.resolve({
+    profile: clone<Profile>(portfolioData.profile),
+    experiences: clone<Experience[]>(portfolioData.experiences),
+    education: clone<Education[]>(portfolioData.education),
+    projects: clone<Project[]>(portfolioData.projects),
+    skills: clone<SkillCategory[]>(portfolioData.skills),
+    certifications: clone<Certification[]>(portfolioData.certifications),
+    courses: clone<Course[]>(portfolioData.courses),
+  });
 }
 
 export async function submitContact(values: ContactFormValues) {
   const payload = contactSchema.parse(values);
-  return apiClient.post<{ message: string }>(endpoints.contact, payload);
+
+  if (typeof window !== 'undefined') {
+    const subject = encodeURIComponent(payload.subject ?? 'Portfolio Contact');
+    const body = encodeURIComponent(
+      [`Name: ${payload.fullName}`, `Email: ${payload.email}`, '', payload.message].join('\n')
+    );
+    const mailtoLink = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+    window.location.href = mailtoLink;
+  }
+
+  return Promise.resolve({ message: 'Email client opened' });
 }

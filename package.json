@@ -1,8 +1,7 @@
 {
-  "name": "portfolio-monorepo",
+  "name": "portfolio",
   "private": true,
   "workspaces": [
-    "backend",
     "frontend"
   ]
 }

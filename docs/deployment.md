@@ -1,65 +1,31 @@
-# Deployment Guide (Docker on Your Server)
+# Deployment Guide (Static Hosting)
 
-This walkthrough shows how to run the entire portfolio stack—frontend, backend API, and PostgreSQL—on a single machine using Docker Compose. You can start on your own laptop or home server and later move the exact same Compose setup to an AWS EC2 instance or any Docker-capable host.
+With the backend removed, the portfolio can be deployed anywhere that serves static files. GitHub Pages is the primary target, but the same build works on Netlify, Vercel (static export), Cloudflare Pages, or an S3 bucket.
 
-## 1. Prerequisites
-- Docker Engine 24+ and Docker Compose plugin (`docker compose` v2).
-- Git (to clone/pull updates from this repository).
-- A hostname or IP that your visitors can reach (public or within your network).
+## 1. Build the site
+```bash
+cd frontend
+VITE_BASE_PATH=/Portfolio/ npm run build
+```
+- Set `VITE_BASE_PATH` to the sub-path where the site will be hosted. For GitHub Pages the pattern is `/repository-name/`.
+- The compiled assets land in `frontend/dist`.
+- Copy `dist/index.html` to `dist/404.html` so React Router handles deep links on refresh.
 
-## 2. Prepare environment variables
-1. Copy the sample file and edit it with strong secrets:
+## 2. Publish to GitHub Pages
+1. Commit the new `dist` contents to a deployment branch (`gh-pages` is conventional). A simple option from the repo root:
    ```bash
-   cp .env.example .env
+   git subtree push --prefix frontend/dist origin gh-pages
    ```
-2. Update the following keys in `.env`:
-   - `ADMIN_EMAIL` – the address allowed to log into the admin panel.
-   - `ADMIN_PASSWORD` – strong password for admin login.
-   - `JWT_SECRET` – at least 32 random characters (use `openssl rand -hex 32`).
-   - `DATABASE_URL` – keep the default unless you already have a different Postgres instance.
+2. In the GitHub UI, go to **Settings → Pages**, choose "Deploy from a branch", select `gh-pages`, and use the `/ (root)` folder.
+3. Wait for the Pages job to finish, then visit `https://moashraf259.github.io/Portfolio/`.
 
-> These values are read by Docker Compose and the backend container automatically.
+## 3. Alternative hosts
+- **Netlify**: drag the `dist` folder into the Netlify dashboard or link the repo and set the build command to `npm run build` with `VITE_BASE_PATH=/`.
+- **Vercel**: create a project from the `frontend` directory, disable serverless functions, and enable "static export".
+- **S3/CloudFront**: upload the `dist` folder to an S3 bucket configured for static website hosting and point CloudFront at it.
 
-## 3. Build application images
-From the project root run:
-```bash
-docker compose build
-```
-This produces two images:
-- `backend` – Node.js API with Prisma client baked in.
-- `frontend` – Nginx serving the built React app and reverse proxying `/api/*` to the backend container.
+## 4. Updating content
+Edit `frontend/src/content/portfolio-data.ts`, commit, rebuild, and redeploy. No databases or environment variables are required.
 
-## 4. Run the stack
-Start everything in the background:
-```bash
-docker compose up -d
-```
-Compose launches three services:
-- `postgres` on port `5432` (data persisted under `data/postgres/` on the host)
-- `backend` on port `4000`
-- `frontend` on port `3000` (public entry point)
-
-The first start automatically runs database migrations. Visit `http://<your-host>:3000` to see the portfolio, and API endpoints are available under `http://<your-host>:3000/api/v1`.
-
-## 5. Seed initial portfolio data (optional)
-If you want the sample profile/projects that ship with the repo, run the seed script once:
-```bash
-docker compose run --rm backend node dist/prisma/seed.js
-```
-> **Warning:** The seed script wipes existing portfolio/contact data before inserting defaults. Only run it on a new database or when you intentionally want to reset content.
-
-## 6. Day-to-day operations
-- **Check logs**: `docker compose logs -f backend` (or `frontend`/`postgres`).
-- **Update to latest code**: `git pull`, then `docker compose build --pull` and `docker compose up -d`.
-- **Stop services**: `docker compose down`.
-- **Back up database**: `docker compose exec postgres pg_dump -U portfolio_user portfolio > backup.sql` or archive the `data/postgres/` directory when the stack is stopped.
-
-## 7. Exposing the site publicly
-- Forward TCP ports `3000` (frontend) and optionally `4000` (direct API) from your router/firewall to the Docker host.
-- For HTTPS, place a reverse proxy such as Caddy or Traefik in front of the Compose stack to terminate TLS and forward traffic to `frontend:80`.
-- When you later move to an EC2 or other cloud VM, copy the repository, recreate the `.env`, and repeat the same `docker compose build` + `docker compose up -d` steps.
-
-## 8. Optional GitHub automation
-The repository still contains GitHub Actions workflows for building the frontend and publishing backend container images. They are useful if you want CI builds or to distribute the backend image via GHCR, but they are **not required** for the self-hosted Docker deployment described above.
-
-Following these steps keeps every component under your control while preserving an easy migration path to cloud infrastructure later.
+## 5. Returning to the API version
+The `fullstack-backup` branch retains the Express/Prisma backend and Docker workflows. Merge or cherry-pick from that branch if you need to reintroduce dynamic data in the future.

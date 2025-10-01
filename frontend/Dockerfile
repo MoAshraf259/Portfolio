@@ -9,9 +9,7 @@ COPY package*.json ./
 RUN npm install
 
 FROM deps AS build
-ARG VITE_API_BASE_URL=/api/v1
 ARG VITE_BASE_PATH=/
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ENV VITE_BASE_PATH=${VITE_BASE_PATH}
 COPY tsconfig.json ./
 COPY vite.config.ts ./
