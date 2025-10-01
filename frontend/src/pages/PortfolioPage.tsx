@@ -42,7 +42,7 @@ export function PortfolioPage() {
           id="experience"
           eyebrow="Professional Journey"
           title="Experience"
-          description="DevOps leadership and embedded engineering work spanning cloud-native platforms, GPU-ready machine learning pipelines, and mission-critical automotive systems."
+          description="DevOps leadership across cloud-native platforms, GPU-aware AI pipelines, and mission-critical automation programs."
         >
           <ExperienceTimeline experiences={experiences} />
         </Section>
@@ -50,7 +50,7 @@ export function PortfolioPage() {
           id="projects"
           eyebrow="Highlighted Work"
           title="Projects & Platforms"
-          description="High-impact initiatives ranging from GitOps-driven infrastructure to embedded systems with over-the-air firmware delivery."
+          description="High-impact platform engineering initiatives across infrastructure automation, AI/ML operations, and reliable delivery pipelines."
         >
           <ProjectGrid projects={projects} />
         </Section>
@@ -58,7 +58,7 @@ export function PortfolioPage() {
           id="skills"
           eyebrow="Core Expertise"
           title="Technical Skills"
-          description="A balanced toolkit across cloud infrastructure, automation, observability, embedded development, and communication protocols."
+          description="A balanced toolkit across cloud infrastructure, automation, observability, and platform reliability."
         >
           <SkillGroups skills={skills} />
         </Section>
@@ -66,7 +66,7 @@ export function PortfolioPage() {
           id="education"
           eyebrow="Foundations"
           title="Education"
-          description="Formal engineering background and intensive training programs focused on embedded systems and automation."
+          description="Formal engineering background and intensive training programs focused on automation and systems engineering."
         >
           <EducationList items={education} />
         </Section>

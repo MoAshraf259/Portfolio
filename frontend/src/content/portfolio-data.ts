@@ -4,12 +4,19 @@ export const portfolioData: PortfolioData = {
   profile: {
     id: 1,
     name: 'Mohamed Ashraf Shaaban Aata',
-    headline: 'DevOps & Embedded Software Engineer',
+    headline: 'DevOps & Platform Engineer',
     email: 'mohamed.ashraf13998@gmail.com',
     phone: '01112233567',
     location: 'Cairo, Egypt',
-    summary:
-      'DevOps & Embedded Software Engineer blending cloud-native automation with firmware fundamentals. Hands-on with AWS, Kubernetes, Terraform, Ansible, and CI/CD pipelines that emphasize reliability and measurable impact.',
+    summary: `I'm a DevOps & Platform Engineer in Cairo focused on building reliable, cost-efficient cloud platforms on AWS. I design and operate containerized workloads, automate infrastructure with Terraform and Ansible, and ship CI/CD with GitHub Actions, GitLab CI, and ArgoCD.
+
+Lately, I've been engineering GPU-aware AI platforms for LLM inference using Ollama and vLLM - baking optimized images, adding GPU metrics to CloudWatch and Prometheus, and tightening feedback loops with Grafana dashboards. I also build internal developer portals and automation for teams to move faster without sacrificing reliability or cost control.
+
+Core strengths:
+- Kubernetes (Kubespray), Docker, Terraform, Ansible, GitHub Actions, GitLab CI, ArgoCD
+- AWS (EC2, VPC, EBS, ECR/GHCR, CloudWatch, IAM) with networking and security baselines
+- CI/CD pipelines, image hardening, Trivy scanning, pull-request environments
+- Observability (Prometheus, Grafana, ELK), SLOs, cost monitoring, savings strategies`,
     linkedin: 'https://www.linkedin.com/in/mohamed-ashraf-164749243/',
     github: 'https://github.com/MoAshraf259',
     website: null,
